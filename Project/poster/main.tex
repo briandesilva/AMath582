@@ -1,0 +1,491 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Jacobs Landscape Poster
+% LaTeX Template
+% Version 1.1 (14/06/14)
+%
+% Created by:
+% Computational Physics and Biophysics Group, Jacobs University
+% https://teamwork.jacobs-university.de:8443/confluence/display/CoPandBiG/LaTeX+Poster
+% 
+% Further modified by:
+% Nathaniel Johnston (nathaniel@njohnston.ca)
+%
+% This template has been downloaded from:
+% http://www.LaTeXTemplates.com
+%
+% License:
+% CC BY-NC-SA 3.0 (http://creativecommons.org/licenses/by-nc-sa/3.0/)
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+
+\documentclass[final]{beamer}
+
+\usepackage[scale=1.24]{beamerposter} % Use the beamerposter package for laying out the poster
+
+\usetheme{confposter} % Use the confposter theme supplied with this template
+
+\setbeamercolor{block title}{fg=ngreen,bg=white} % Colors of the block titles
+\setbeamercolor{block body}{fg=black,bg=white} % Colors of the body of blocks
+\setbeamercolor{block alerted title}{fg=white,bg=dblue!70} % Colors of the highlighted block titles
+\setbeamercolor{block alerted body}{fg=black,bg=dblue!10} % Colors of the body of highlighted blocks
+% Many more colors are available for use in beamerthemeconfposter.sty
+
+%-----------------------------------------------------------
+% Define the column widths and overall poster size
+% To set effective sepwid, onecolwid and twocolwid values, first choose how many columns you want and how much separation you want between columns
+% In this template, the separation width chosen is 0.024 of the paper width and a 4-column layout
+% onecolwid should therefore be (1-(# of columns+1)*sepwid)/# of columns e.g. (1-(4+1)*0.024)/4 = 0.22
+% Set twocolwid to be (2*onecolwid)+sepwid = 0.464
+% Set threecolwid to be (3*onecolwid)+2*sepwid = 0.708
+
+\newlength{\sepwid}
+\newlength{\onecolwid}
+\newlength{\twocolwid}
+\newlength{\threecolwid}
+\setlength{\paperwidth}{48in} % A0 width: 46.8in
+\setlength{\paperheight}{36in} % A0 height: 33.1in
+\setlength{\sepwid}{0.024\paperwidth} % Separation width (white space) between columns
+\setlength{\onecolwid}{0.22\paperwidth} % Width of one column
+\setlength{\twocolwid}{0.464\paperwidth} % Width of two columns
+\setlength{\threecolwid}{0.708\paperwidth} % Width of three columns
+\setlength{\topmargin}{-0.5in} % Reduce the top margin size
+%-----------------------------------------------------------
+
+\usepackage{graphicx}  % Required for including images
+\usepackage{blkarray}  % For blockarray environment (NMF decomp.)
+\usepackage{booktabs}  % Top and bottom rules for tables
+
+%----------------------------------------------------------------------------------------
+%	TITLE SECTION 
+%----------------------------------------------------------------------------------------
+
+\title{Classifying Documents Using Nonnegative Matrix Factorization} % Poster title
+
+\author{Brian de Silva} % Author(s)
+
+\institute{Department of Applied Mathematics, University of Washington} % Institution(s)
+
+%----------------------------------------------------------------------------------------
+
+\begin{document}
+
+\addtobeamertemplate{block end}{}{\vspace*{2ex}} % White space under blocks
+\addtobeamertemplate{block alerted end}{}{\vspace*{2ex}} % White space under highlighted (alert) blocks
+
+\setlength{\belowcaptionskip}{2ex} % White space under figures
+\setlength\belowdisplayshortskip{2ex} % White space under equations
+
+\begin{frame}[t] % The whole poster is enclosed in one beamer frame
+
+\begin{columns}[t] % The whole poster consists of three major columns, the second of which is split into two columns twice - the [t] option aligns each column's content to the top
+
+\begin{column}{\sepwid}\end{column} % Empty spacer column
+
+\begin{column}{\onecolwid} % The first column
+
+%----------------------------------------------------------------------------------------
+%	OBJECTIVES
+%----------------------------------------------------------------------------------------
+
+\begin{alertblock}{Objectives}
+
+\begin{itemize}
+\item Classify text documents based on subject matter, author, etc.
+\item Explore important features (topics)
+\end{itemize}
+
+\end{alertblock}
+
+%----------------------------------------------------------------------------------------
+%	INTRODUCTION
+%----------------------------------------------------------------------------------------
+
+\begin{block}{Text Documents}
+We use the \textbf{bag-of-words} approach to model text documents as vectors with nonnegative entries corresponding to the number of times words appear in the documents.
+We use a tool called \textbf{term frequency-inverse document frequency} to reweight the entries of the bag-of-words vectors so they reflect the importance of a word in a document. Then we concatenate the tf-idf reweighted vectors for all the documents from a corpus as columns in one histogram matrix, $H$.
+% Given a corpus of documents one can construct a dictionary consisting of all the words present in at least one of the documents. We then represent each document as a vector with nonnegative entries corresponding to the number of occurrences of each dictionary word within it. We are effectively modeling the document as an unordered collection of its consituent words
+% \begin{equation*}
+% 	d = c_1w_1 + c_2w_2 + \dots + c_kw_k.
+% \end{equation*}
+% Here $d$ is the document, $w_1,w_2,\dots,w_k$ are the words in the dictionary, and $c_i$ is the number of times $w_i$ appears in $d$, for $i=1,2,\dots,k$.
+
+
+
+
+% \textbf{Term frequency-inverse document frequency} (tf-idf) is a way to reweight the entries of the bag-of-words vectors so they reflect the importance of a word in a document \textit{which is part of a larger corpus}. The coefficient increases if the word appears often in the document and decreases if it appears often in the corpus. We concatenate the tf-idf reweighted vectors for all the documents from a corpus as columns in one histogram matrix, $H$.
+
+% We stack the tf-idf reweighted words of all the documents in a corpus as columns in one large histogram matrix, $H$.
+% If the word $w_i$ appears $n_d$ times in document $d$, at most $n_D$ times in any document of the corpus, in $M$ documents of the corpus, and if the corpus contains $N$ documents, then the tf-idf coefficient is
+% \begin{equation*}
+% 	\tilde c_i = \frac{n_d}{n_D}\log\left(\frac{N}{M}\right).
+% \end{equation*}
+
+\end{block}
+
+%----------------------------------------------------------------------------------------
+%	Nonnegative Matrix Factorization
+%----------------------------------------------------------------------------------------
+
+\begin{block}{Nonnegative Matrix Factorization (NMF)}
+
+The \textbf{Nonnegative Matrix Factorization} of a matrix $H$ is an approximate decomposition of $H$ into two (often low-rank) matrices with nonnegative entries $H\approx UV^T$:
+
+\begin{equation*}
+\begin{blockarray}{ccccc}
+	& & \text{Docs.} & & \\
+	\begin{block}{c[ccc]c}
+		& & & & \\
+		& & & & \\
+		\text{Words} & & \text{H} & & ~\approx \\
+		& & & & \\
+		& & & & \\
+	\end{block}
+\end{blockarray}
+% \approx
+\begin{blockarray}{cc}
+	& \text{Topics} \\
+	\begin{block}{c[c]}
+		& \\
+		& \\
+		\text{Words} & \text{U} \\
+		& \\
+		& \\
+	\end{block}
+\end{blockarray}
+\begin{blockarray}{cccccc}
+	& & & \text{Docs.} & & \\
+	\begin{block}{c[ccccc]}
+		\text{Topics} & & & \text{V}^{\text{T}} & & \\
+	\end{block}
+\end{blockarray}.
+\end{equation*}
+The columns of $U$ give the ``topics'' present in the documents of the corpus and the columns of $V^T$ give the coordinates of each document in this topic basis.
+% It is this representation of the documents we use to cluster/classify them.
+
+%------------------------------------------------
+% NMF picture
+\vskip 0.5cm
+\begin{figure}
+\includegraphics[width=\linewidth]{topic_vecs-crop.pdf}
+\caption{Topic vectors for the historical texts (perfect clustering)}
+\end{figure}
+% Need to use V^T so that image is wide and skinny
+
+\end{block}
+
+
+
+
+%----------------------------------------------------------------------------------------
+
+\end{column} % End of the first column
+
+\begin{column}{\sepwid}\end{column} % Empty spacer column
+
+\begin{column}{\twocolwid} % Begin a column which is two columns wide (column 2)
+
+\begin{columns}[t,totalwidth=\twocolwid] % Split up the two columns wide column
+
+\begin{column}{\onecolwid}\vspace{-.6in} % The first column within column 2 (column 2.1)
+
+
+\begin{block}{Gram Matrix}
+For our purposes the (normalized) Gram matrix $G$ is given by
+$G=\tfrac{1}{\|U\|_2^2}U^TU$.
+Here $G_{i,j}$ is the dot product of scaled versions of topics $i$ and $j$ hence it gives a measure of their similarity.
+Left-multiplying $V$ by $G$ modifies the topic vectors so that the weight of their entries are distributed amongst topics with similar compositions. This means we no longer need to know the number of topics to use in advance.
+
+
+\end{block}
+
+
+
+
+%----------------------------------------------------------------------------------------
+%	ALGORITHM OVERVIEW
+%----------------------------------------------------------------------------------------
+
+\begin{block}{Algorithm Overview}
+\begin{enumerate}
+	\item Construct dictionary and histogram matrix $H$
+	\item Use NMF to approximately decompose $H$ into topics and topic vectors
+	\item Apply Gram reweighting to topic vectors
+	\item Cluster the documents using their topic representations using k-means
+\end{enumerate}
+
+\end{block}
+
+%----------------------------------------------------------------------------------------
+
+\end{column} % End of column 2.1
+
+\begin{column}{\onecolwid}\vspace{-.6in} % The second column within column 2 (column 2.2)
+
+
+
+%----------------------------------------------------------------------------------------
+%	Data Set
+%----------------------------------------------------------------------------------------
+
+\begin{block}{Data Set}
+We gathered the following set of text documents from Project Gutenberg to test our algorithm:
+
+
+\begin{itemize}
+\item Historical texts
+	\begin{itemize}
+		\item \textit{History of the Seventh Ohio Volunteer Cavalry} by R. C. Rankin
+		\item \textit{History of Company E of the Sixth Minnesota Regiment of Volunteer Infantry} by Alfred J. Hill
+		\item \textit{Abraham Lincoln and the Union A Chronicle of the Embattled North} by Nathaniel W. Stephenson
+	\end{itemize}
+
+\item Scientific texts
+	\begin{itemize}
+		\item \textit{On The Origin of Species} by Charles Darwin
+		\item \textit{The Life-Story of Insects} by Geo. H. Carpenter
+		\item \textit{The Chemistry of Food and Nutrition} by A. W. Duncan
+	\end{itemize}
+\end{itemize}
+
+Every text was broken up into five equi-length text files. Some books were much longer than others. The dictionary was created directly from the corpus itself and well known ``stopwords'' that were likely to appear across almost all documents were removed (e.g. ``the'' or ``a'').
+
+\end{block}
+
+%----------------------------------------------------------------------------------------
+
+\end{column} % End of column 2.2
+
+\end{columns} % End of the split of column 2 - any content after this will now take up 2 columns width
+
+%----------------------------------------------------------------------------------------
+%	IMPORTANT RESULT
+%----------------------------------------------------------------------------------------
+
+\begin{alertblock}{Key Observation}
+
+Using the Gram matrix to reweight the topic vectors we incorporate the similarity between topics into the model, significantly improving performance and reducing the amount of required supervision.
+
+\end{alertblock} 
+
+%----------------------------------------------------------------------------------------
+
+% \begin{block}{Results}
+
+
+% \begin{table}
+% \vspace{2ex}
+% \begin{tabular}{c c c c}
+% \toprule
+% \textbf{Topic 1} & \textbf{Topic 2} & \textbf{Topic 3} & \textbf{Topic 4}\\
+% \midrule
+%  	col         & douglas	   & lincoln & rejoined \\
+%     capt        & political    & government & aug      \\
+%     gen         & southern     & chase & sick     \\
+%     rankin      & kansas       & american & enlisted \\
+%     lexington   & buchanan     & 1861 & fort     \\
+%     % brigade     & republicans  & vallandigham & lake     \\
+%     % knoxville   & slavery      & congress & company  \\
+%     % cumberland  & democrats    & people & sergeant \\
+%     % garrard     & lincoln      & lincolns & henricks \\
+%     % ky          & sectional    & europe & corporal \\
+% \bottomrule
+% \end{tabular}
+% \caption{Table caption}
+% \end{table}
+
+% \end{block}
+
+
+\begin{columns}[t,totalwidth=\twocolwid] % Split up the two columns wide column again
+
+\begin{column}{\onecolwid} % The first column within column 2 (column 2.1)
+
+%----------------------------------------------------------------------------------------
+%	Discovered Topics
+%----------------------------------------------------------------------------------------
+
+\begin{block}{Topics}
+
+% All three get perfect purity scores
+\begin{table}
+% \vspace{2ex}
+\begin{tabular}{c c c}
+\toprule
+\textbf{Topic 1} & \textbf{Topic 2} & \textbf{Topic 3}\\
+\midrule
+ 	lincoln      & col 	   		& rejoined \\
+    douglas      & capt      	& aug      \\
+    political    & gen    		& sick     \\
+    slavery      & rankin      	& enlisted \\
+    southern     & lexington    & fort     \\
+\end{tabular}
+\caption{Top five words in each topic (historical documents)}
+\end{table}
+
+
+
+
+
+\begin{table}
+% \vspace{2ex}
+\begin{tabular}{c c c}
+\toprule
+\textbf{Topic 1} & \textbf{Topic 4} & \textbf{Topic 6} \\
+\midrule
+    fig 			& acid 		& selection  \\
+    cuticle			& uric 		& hybrids   \\
+    dragonfly 		& foods 	& varieties \\
+    cockroach 		& meat 		& sterility \\
+    wings 			& extract 	& wax        \\
+\end{tabular}
+\caption{Top five words in each topic (science documents)}
+\end{table}
+
+\end{block}
+
+%----------------------------------------------------------------------------------------
+
+\end{column} % End of column 2.1
+
+\begin{column}{\onecolwid} % The second column within column 2 (column 2.2)
+
+%----------------------------------------------------------------------------------------
+%	RESULTS
+%----------------------------------------------------------------------------------------
+
+\begin{block}{Clustering Performance}
+The k-means algorithm's clustering accuracy depended upon multiple factors, including the number of topics used, the number of clusters, the similarity measure used, the corpus, and the NMF.
+
+\begin{table}
+\vspace{2ex}
+\begin{tabular}{|c|c|c|c|}
+\toprule
+\textbf{Data set} & \textbf{Topics} & \textbf{Purity} & \textbf{Similarity}\\
+\midrule
+	Science & 2 & 1 & Cosine \\ \hline
+	Science & 3 & 1 & Cosine \\ \hline
+	Science & 10 & 1 & Cosine \\ \hline \hline
+	Historical & 2 & 0.88 & Cosine \\ \hline
+	Historical & 3 & 1 & Cosine \\ \hline
+	Historical & 10 & 1 & Cosine \\ \hline \hline
+	All & 2 & 0.73 & Cosine \\ \hline
+	All & 6 & 1 & Cosine \\ \hline
+	All & 10 & 1 & Cosine \\ \hline
+	
+\end{tabular}
+\caption{Summary of clustering performance}
+\end{table}
+
+\end{block}
+
+%----------------------------------------------------------------------------------------
+
+\end{column} % End of column 2.2
+
+\end{columns} % End of the split of column 2
+
+\end{column} % End of the second column
+
+\begin{column}{\sepwid}\end{column} % Empty spacer column
+
+\begin{column}{\onecolwid} % The third column
+
+%----------------------------------------------------------------------------------------
+%	CONCLUSION
+%----------------------------------------------------------------------------------------
+
+\begin{block}{Topic Vector Plots}
+
+% Gram picture
+\begin{figure}
+\includegraphics[width=0.95\linewidth]{gram_vecs-crop.pdf}
+\caption{Gram-reweighted topic vectors for the scientific texts}
+\end{figure}
+
+% 10 topics all docs
+\begin{figure}
+\includegraphics[width=0.95\linewidth]{gram_vecs6-crop.pdf}
+\caption{Gram-reweighted topic vectors for the all texts (10 topics)}
+\end{figure}
+
+\end{block}
+
+
+
+
+%---------------------------------------------------------------------------------
+% Conclusion
+
+\begin{block}{Conclusions}
+\begin{itemize}
+	\item NMF provides a representation of documents in which they are easy to cluster and automatically provides insight into their content
+	\item Gram matrix reweighting reduces supervision required for clustering 
+\end{itemize}
+	
+\end{block}
+
+
+
+%---------------------------------------------------------------------------------
+
+
+%----------------------------------------------------------------------------------------
+%	REFERENCES
+%----------------------------------------------------------------------------------------
+
+% \begin{block}{References}
+
+% \nocite{*} % Insert publications even if they are not cited in the poster
+% \small{\bibliographystyle{unsrt}
+% \bibliography{sample}\vspace{0.75in}}
+
+% \end{block}
+
+%----------------------------------------------------------------------------------------
+%	ACKNOWLEDGEMENTS
+%----------------------------------------------------------------------------------------
+
+\setbeamercolor{block title}{fg=red,bg=white} % Change the block title color
+
+\begin{block}{Acknowledgements}
+
+\small{\rmfamily{All of the text documents used for this project were obtained from Project Gutenberg: \url{https://www.gutenberg.org}. The stopwords removed from the documents were from the ``Long Stopword List'' at \url{http://www.ranks.nl/stopwords}}} \\
+
+\end{block}
+
+%----------------------------------------------------------------------------------------
+%	CONTACT INFORMATION
+%----------------------------------------------------------------------------------------
+
+\setbeamercolor{block alerted title}{fg=black,bg=norange} % Change the alert block title colors
+\setbeamercolor{block alerted body}{fg=black,bg=white} % Change the alert block body colors
+
+\begin{alertblock}{Contact Information}
+
+\begin{itemize}
+\item Email: \href{mailto:bdesilva@uw.edu}{bdesilva@uw.edu}
+% \item Mail: 202 Lewis Hall, UW Box 353925
+\end{itemize}
+
+\end{alertblock}
+
+\begin{center}
+\includegraphics[width=0.25\linewidth]{UW_logo.pdf}
+% \begin{tabular}{ccc}
+% \includegraphics[width=0.4\linewidth]{UW_logo.png} & \hfill & \includegraphics[width=0.4\linewidth]{amath_logo.png}
+% \end{tabular}
+\end{center}
+
+%----------------------------------------------------------------------------------------
+
+\end{column} % End of the third column
+
+\end{columns} % End of all the columns in the poster
+
+\end{frame} % End of the enclosing frame
+
+\end{document}

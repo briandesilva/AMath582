@@ -1,0 +1,258 @@
+% Amath 582 HW 1
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Stylish Article
+% LaTeX Template
+% Version 2.1 (1/10/15)
+%
+% This template has been downloaded from:
+% http://www.LaTeXTemplates.com
+%
+% Original author:
+% Mathias Legrand (legrand.mathias@gmail.com) 
+% With extensive modifications by:
+% Vel (vel@latextemplates.com)
+%
+% License:
+% CC BY-NC-SA 3.0 (http://creativecommons.org/licenses/by-nc-sa/3.0/)
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+
+\documentclass[fleqn,10pt]{SelfArx} % Document font size and equations flushed left
+
+\usepackage[english]{babel} % Specify a different language here - english by default
+
+\usepackage{amsmath}
+\usepackage{bm}			% For bold symbols
+\usepackage{graphicx}	% For images and figures
+
+%----------------------------------------------------------------------------------------
+%	COLUMNS
+%----------------------------------------------------------------------------------------
+
+\setlength{\columnsep}{0.55cm} % Distance between the two columns of text
+\setlength{\fboxrule}{0.75pt} % Width of the border around the abstract
+
+%----------------------------------------------------------------------------------------
+%	COLORS
+%----------------------------------------------------------------------------------------
+
+\definecolor{color1}{RGB}{0,0,90} % Color of the article title and sections
+\definecolor{color2}{RGB}{0,20,20} % Color of the boxes behind the abstract and headings
+
+%----------------------------------------------------------------------------------------
+%	HYPERLINKS
+%----------------------------------------------------------------------------------------
+
+\usepackage{hyperref} % Required for hyperlinks
+\hypersetup{hidelinks,colorlinks,breaklinks=true,urlcolor=color2,citecolor=color1,linkcolor=color1,bookmarksopen=false,pdftitle={Title},pdfauthor={Author}}
+
+%----------------------------------------------------------------------------------------
+%	ARTICLE INFORMATION
+%----------------------------------------------------------------------------------------
+
+\JournalInfo{Amath 582 HW 1} % Journal information
+\Archive{Brian de Silva} % Additional notes (e.g. copyright, DOI, review/research article)
+
+\PaperTitle{Amath 582 Homework 1} % Article title
+
+\Authors{Brian de Silva\textsuperscript{1}} % Authors
+\affiliation{\textsuperscript{1}\textit{Department of Applied Mathematics, University of Washington, Seattle}} % Author affiliation
+
+\Keywords{} % Keywords - if you don't want any simply remove all the text between the curly brackets
+\newcommand{\keywordname}{Keywords} % Defines the keywords heading name
+
+%----------------------------------------------------------------------------------------
+%	ABSTRACT
+%----------------------------------------------------------------------------------------
+
+\Abstract{In this homework writeup we use denoise three-dimensional ultrasound measurements to track the movement of a marble through the small intestines of a dog, Fluffy. To accomplish this we write a short MATLAB script which identifies the frequency componenent of highest magnitude and applies a filter in the Fourier (frequency) domain.}
+
+%----------------------------------------------------------------------------------------
+
+\begin{document}
+
+\flushbottom % Makes all text pages the same height
+
+\maketitle % Print the title and abstract box
+
+\tableofcontents % Print the contents section
+
+% \thispagestyle{empty} % Removes page numbering from the first page
+
+%----------------------------------------------------------------------------------------
+%	ARTICLE CONTENTS
+%----------------------------------------------------------------------------------------
+
+\section{Introduction}
+\label{sec:introduction}
+The author's dog, Fluffy has swallowed a marble. The vet thinks that it has worked its way into Fluffy's intestines. Data is collected using ultrasound which gives spatial variations in a small area of the small intestines where the vet suspects the marble to be. However these data are very noisy due to the movement of Fluffy and internal fluid movement through his intestines.
+
+In this assignment we attempt to denoise the data to determine the position of the marble over time using MATLAB. Our biggest ally will be the (3-dimensional) Discrete Fourier Transform (DFT). The overall plan of action is to use the DFT to represent the data in the frequency domain where we can identify the strongest frequency component, filter about it, and take the inverse transform to denoise the original ultrasound data.
+
+The structure of this assignment is as follows: in Section \ref{sec:theoretical_background} we give a brief review of the theory behind our techniques. Next we discuss our algorithm and its implementation in MATLAB in Section \ref{sec:algorithm_implementation_and_development} before discussing our numerical results in Section \ref{sec:computational_results}. Finally we make some closing remarks in Section \ref{sec:summary_and_conclusions}.
+% section introduction (end)
+
+
+\section{Theoretical Background} % (fold)
+\label{sec:theoretical_background}
+
+\subsection{The Discrete Fourier Transform}
+\label{sec:dft}
+The \textit{Fourier Transform} of an $L^1$ function $f$ is given by
+\begin{equation}\label{eq:ft}
+F(k) = \frac{1}{\sqrt{2\pi}}\int^\infty_{-\infty}e^{-ikx}f(x)dx.
+\end{equation}
+This mapping can be inverted using the following relation
+\begin{equation}
+f(x) = \frac{1}{\sqrt{2\pi}}\int^\infty_{-\infty}e^{ikx}F(k)dk.
+\end{equation}
+
+\noindent
+Without using symbolic programming we will not be able to work with functions defined on the whole real line, nor will we be able to compute the integral in \ref{eq:ft}. Rather we will be working with sets of data which we may interpret as the output of a function evaluated on a set of discrete points, or a grid. In this case the \textit{Discrete Fourier Transform} (DFT) is the appropriate tool to use. In fact the Fourier Transform reduces to the DFT in this case. 
+
+One can attempt to represent a given function as a sum of $\sin$ and $\cos$ functions in the set $\{\sin(kx),\cos(kx)\}_{k=0}^\infty$. If the function, say $f$, is well-behaved enough then it can be represented exactly with a \textit{Fourier Series}:
+\begin{equation}\label{eq:fs}
+	f(x) = a_0 + \sum^\infty_{k=1}a_k\cos(kx)+b_k\sin(kx).
+\end{equation} 
+The coefficients $\{a_k\}$ and $\{b_k\}$ give the frequency components of $f$. That is, they express how similar $f$ is to waves with frequencies proportional to $k$.
+
+Both transforms map functions/data to their frequency components. When applying the DFT to  arrays of values (or data) we obtain a discrete set of frequency components corresponding to finitely many frequencies. In addition to transforming the function, the implementation of the DFT used in practice, the \textit{Fast Fourier Transform} (FFT), has a few additional properties: it (i) shifts the data so that $x~\in~[0,L]~\rightarrow~[-L,0]$ and $x~\in~[-L,0]~\rightarrow~[0,L]$ (for data generated on the interval $[-L,L]$ for some $L>0$), (ii) multiplies every other mode by -1, and (iii) assumes you are working on a $2\pi$ periodic domain.
+
+\subsection{Filtering with the DFT}
+If one has noisy data in which there is believed to be some smooth underlying signal then the DFT can be used to remove some of the noise. One begins by taking the FFT of the data. Then, if one knows or can identify the principal frequency or frequencies of the signal one can construct a filter to smoothly remove other frequencies caused by the noise. For example, if we were working in one dimension and we knew that our signal had just one major frequency component, $\hat k$ then we might apply the following filter to the FFT of the data vector:
+\begin{equation}
+	e^{-a(\boldsymbol{k}-\hat k)^2},
+\end{equation}
+where $k$ is a vector of the frequency components of the data vector (i.e. it is the FFT of the data) and $a>0$ is some constant controlling the width of the filter. When multiplied against $\boldsymbol{k}$, this function damps out the wave numbers which are far away from $\hat k$ and essentially leaves those nearby alone. When the inverse FFT is applied to the filtered frequency component vector a filtered version of the original data is produced which has significantly less noise than the original data.
+
+A perceptive reader may wonder what one does if the primary frequencies composing the underlying signal are unknown. One approach could be to check whether one or more of the frequency components are more dominant than the others by comparing their relative magnitudes. However if the data is noisy enough then this may prove to be impossible. There is another option for surmounting this obstacle if one has noisy data from multiple sequential instants in time, assuming that the noise is white. It can be shown that the Fourier Transform of white noise is simply more white noise. This property, along with the fact that mean of white noise goes to 0 as more and more measurements are taken, can be exploited to reduce the noise in the frequency domain. If we average the FFTs of all the different time measurements then the magnitude of the frequencies cause by white noise should all decrease significantly (given enough measurements). We can then identify the principal frequency (or frequencies) of the signal and create a filter to remove noise from all of the individual time slices. This is the approach we take to complete the assignment.
+
+% section theoretical_background (end)
+
+
+\section{Algorithm Implementation and Development} % (fold)
+\label{sec:algorithm_implementation_and_development}
+In this section we describe the numerical algorithm developed to clean up the noisy ultrasound data. The procedure is given below along with a few comments and pertinent details.
+
+
+\subsection*{1. Take 3-dimensional DFT of each slice of ultrasound data}
+Because of property (iii) of the FFT from Section \ref{sec:dft} we must scale the frequencies by a factor of $2\pi / 2L$, with $L=15$ as is prescribed by the data. We use 64 Fourier modes (again this number corresponds with the resolution of the ultrasound data which is $64\times64\times64$).
+
+\subsection*{2. Compute the average of the 20 Fourier Transformed slices to dampen white
+			noise}
+We use the MATLAB function \texttt{fftn} to compute the three-dimensional FFT of each of the time slices.
+
+\subsection*{3. Find the frequency component of largest magnitude from the averaged 
+			frequencies and use it to construct a 3-dimensional Gaussian filter}
+Denote the three components of the frequency of largest magnitude $k_1,~k_2$, and $k_3$ and let $\boldsymbol{K_1},~\boldsymbol{K_2},$ and $\boldsymbol{K_3}$ be the three 3D frequency grid matrices. Then the Gaussian filter we use is given by
+\begin{equation}
+e^{-\left((\boldsymbol{K_1}-k_1)^2 + (\boldsymbol{K_1}-k_2)^2 + (\boldsymbol{K_3}-k_3)^2\right)}.
+\end{equation}
+
+\subsection*{4. Apply this filter to each of the frequency representations of the data}
+\vskip 0.5cm
+
+\subsection*{5. Invert each FFT to obtain denoised ultrasound data}
+Here we use the MATLAB function \texttt{ifftn} to invert the filtered FFTs of the original data.
+
+\subsection*{6. Identify the location of the marble at each time step}
+To accomplish this we simply found the spatial coordinates of the entry of largest magnitude in each of the denoised time slices. Collecting the coordinates at each time step we can produce a plot of the path the marble takes as time evolves.
+
+% section algorithm_implementation_and_development (end)
+
+
+\section{Computational Results} % (fold)
+\label{sec:computational_results}
+The frequency components corresponding to the most prominent frequency (the one associated with the marble) were found to be $(k_1~,k_2~,k_3)~=~(1.8850,~ -1.0472,~ 0)$.
+
+% \begin{figure}
+% \centering
+% \includegraphics[width=\linewidth]{noisy_data}
+% \caption{An \texttt{isosurface} plot of the final time slice of noisy data (isosurface value: 0.4)}
+% \label{fig:noisy_data}
+% \end{figure}
+
+% \begin{figure}
+% \centering
+% \includegraphics[width=\linewidth]{clean_data}
+% \caption{An \texttt{isosurface} plot of the final time slice of denoised data (isosurface value: 0.9)}
+% \label{fig:clean_data}
+% \end{figure}
+
+% To provide an idea of just how noisy the original data was Figure \ref{fig:noisy_data} shows an \texttt{isosurface} plot of the given ultrasound data at the last time step. There does not appear to be any discernable pattern, at least not to the naked eye. Contrast this with Figure \ref{fig:clean_data}, a plot of the same data once it has been fed through steps 1-5 of the method described in Section \ref{sec:algorithm_implementation_and_development}. In this figure we have normalized the data matrix so that its largest entry is 1 and we have used an isosurface value of 0.9. This gives a surface of points which is very close to the marble.
+
+\begin{figure}
+\centering
+\includegraphics[width=\linewidth]{marble_path}
+\caption{A plot of the path taken by the marble as time evolves}
+\label{fig:marble_path}
+\end{figure}
+
+Figure \ref{fig:marble_path} shows the estimated positions of the marble at each time step, interpolated to give an approximate trajectory. Fluffy's intestines appear to very closely resemble a helix! At the final time step the coordinates of the marble were estimated to be $(x,~y,~z)~=~(-5.6250,~ 4.2188,~ -6.0938)$, so this is where the veterinarians should aim an acoustic wave to break up the marble during the 20th data measurement. In Figure \ref{fig:marble_path} this corresponds to the point in the bottom left of the plot.
+
+% Center frequency components: (1.8850, -1.0472, 0) = $(k_1,k_2,k_3)$
+% Filter used: $e^{-\left((K_x-k_1)^2+(K_y-k_2)^2+(K_z-k_3)^2\right)}$
+% Final coordinates: (-5.6250, 4.2188, -6.0938)
+
+
+% section computational_results (end)
+
+\section{Summary and Conclusions} % (fold)
+\label{sec:summary_and_conclusions}
+For this assignment we were given a set of noisy ultrasound measurements from which we wished to extract a coherent signal (a marble). To this end we converted the spatial data into the frequency domain using the 3D Discrete Fourier Transform. We then removed a large amount of the noise by averaging the transforms of the samples and identified the frequency signature generated by the marble. Having done this we designed and applied a filter to the frequency components of the ultrasound data and then applied the inverse DFT to obtain cleaner versions of each of the measurements. From these we located the marble at each moment in time and saved Fluffy.
+
+The results of this assignment demonstrate the power of the FFT and filtering in the Fourier domain. It also provided a nice example of how, given enough samples, the average of white noise tends to 0.
+
+% section summary_and_conclusions (end)
+
+
+
+
+%------------------------------------------------
+\phantomsection
+\section*{Appendix A: MATLAB Functions} % The \section*{} command stops section numbering
+Here we outline the nonstandard MATLAB functions used to complete this assignment.
+\vskip 0.5cm
+
+\noindent \texttt{\textbf{fftn(X)}}: Given an $n-$dimensional array of data, $X$,\\ \texttt{fftn(X)} returns the $n-$dimensional DFT of $X$. The output has the same size as the input. This function performs the same shifts as the \texttt{fft} function, in each dimension.
+\vskip 0.3cm
+
+\noindent \texttt{\textbf{ind2sub(S, linearIndex)}}: \texttt{ind2sub} converts the index of a one-dimensional vector to its equivalent indices in an array with dimensions $S(1)\times S(2)\times \dots \times S($\texttt{length}$(S))$. It gives a number of outputs equal to the length of $S$ (one for each dimension of the array). For example, suppose $M$ is an $n\times n\times n$ array. Then \texttt{M(:)} is a vector of length $n^3$. If $(M)_{i,j,k}$ is the 100th entry of \texttt{M(:)} then \texttt{ind2sub([n n n], 100)} would output \texttt{[i, j, k]}.
+\vskip 0.3cm
+
+\noindent \texttt{\textbf{isosurface(X,Y,Z,U,isoval)}}: Given 3D coordinate arrays $X,~Y,$ and $Z$ (formed using \texttt{meshgrid}, for example), a 3D array of scalars $U$ (with the same dimensions as $X,~Y,$ and $Z$), and a scalar \texttt{isoval},\\ \texttt{isosurface(X,Y,Z,U,isoval)} connects points of $U$ with the value specified by \texttt{isoval} in the grid spanned by $X,~Y,$ and $Z$.
+\vskip 0.3cm
+
+\noindent \texttt{\textbf{max(V)}}: If $V$ is a 1D array then the line \\ \texttt{[m,ind] = max(V)} sets \texttt{m} to the maximum value stored in $V$ and \texttt{ind} to the index of the earliest occurence of that value in \texttt{V}.
+\vskip 0.3cm
+
+\noindent \texttt{\textbf{plot3(X,Y,Z)}}: \texttt{plot3} simply generates a 3D plot of the points whose $x,~y,$ and $z$-coordinates are stored in the (equal length) vectors $X,~Y$, and $Z$, respectively.
+\vskip 0.3cm
+
+\noindent \texttt{\textbf{reshape(V,d1,d2,...,dk)}}: \texttt{reshape} simply reshapes the array $V$ into an array with dimensions $d1\times d2\times \dots \times dk$.
+\vskip 0.3cm
+
+\addcontentsline{toc}{section}{Appendix A} % Adds this section to the table of contents
+
+\phantomsection
+\section*{Appendix B: MATLAB Code}
+See the following pages published in MATLAB for the implementation of the algorithm presented in Section \ref{sec:algorithm_implementation_and_development}. Note that some of the plot commands are commented out. This is because the complicated three-dimensional isoplots were not rendering properly in publication mode and the images were to large for MATLAB to save them properly.
+
+\addcontentsline{toc}{section}{Appendix B}
+
+
+
+%----------------------------------------------------------------------------------------
+%	REFERENCE LIST
+%----------------------------------------------------------------------------------------
+% \phantomsection
+% \bibliographystyle{unsrt}
+% \bibliography{sample}
+
+%----------------------------------------------------------------------------------------
+
+\end{document}

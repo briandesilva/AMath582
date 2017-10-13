@@ -1,0 +1,251 @@
+% Amath 582 HW 3
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Stylish Article
+% LaTeX Template
+% Version 2.1 (1/10/15)
+%
+% This template has been downloaded from:
+% http://www.LaTeXTemplates.com
+%
+% Original author:
+% Mathias Legrand (legrand.mathias@gmail.com) 
+% With extensive modifications by:
+% Vel (vel@latextemplates.com)
+%
+% License:
+% CC BY-NC-SA 3.0 (http://creativecommons.org/licenses/by-nc-sa/3.0/)
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+
+\documentclass[fleqn,10pt]{../SelfArx} % Document font size and equations flushed left
+
+\usepackage[english]{babel} % Specify a different language here - english by default
+
+\usepackage{amsmath}
+\usepackage{bm}			% For bold symbols
+\usepackage{graphicx}	% For images and figures
+\usepackage{dsfont}		% For reals, complex, etc.
+
+
+%-----------------------------------------------------------------------------------
+%	Brian's commands:
+\newcommand{\mbf}[1]{\mathbf{#1}}
+\newtheorem{theorem}{Theorem}
+
+%----------------------------------------------------------------------------------
+
+
+%----------------------------------------------------------------------------------------
+%	COLUMNS
+%----------------------------------------------------------------------------------------
+
+\setlength{\columnsep}{0.55cm} % Distance between the two columns of text
+\setlength{\fboxrule}{0.75pt} % Width of the border around the abstract
+
+%----------------------------------------------------------------------------------------
+%	COLORS
+%----------------------------------------------------------------------------------------
+
+\definecolor{color1}{RGB}{0,0,90} % Color of the article title and sections
+\definecolor{color2}{RGB}{0,20,20} % Color of the boxes behind the abstract and headings
+
+%----------------------------------------------------------------------------------------
+%	HYPERLINKS
+%----------------------------------------------------------------------------------------
+
+\usepackage{hyperref} % Required for hyperlinks
+\hypersetup{hidelinks,colorlinks,breaklinks=true,urlcolor=color2,citecolor=color1,linkcolor=color1,bookmarksopen=false,pdftitle={Title},pdfauthor={Author}}
+
+%----------------------------------------------------------------------------------------
+%	ARTICLE INFORMATION
+%----------------------------------------------------------------------------------------
+
+\JournalInfo{Amath 582 HW 4} % Journal information
+\Archive{Brian de Silva} % Additional notes (e.g. copyright, DOI, review/research article)
+
+\PaperTitle{Amath 582 Homework 4: PCA \\ \small{Due: February 18, 2016}} % Article title
+
+\Authors{Brian de Silva\textsuperscript{1}} % Authors
+\affiliation{\textsuperscript{1}\textit{Department of Applied Mathematics, University of Washington, Seattle}} % Author affiliation
+
+\Keywords{} % Keywords - if you don't want any simply remove all the text between the curly brackets
+\newcommand{\keywordname}{Keywords} % Defines the keywords heading name
+
+%----------------------------------------------------------------------------------------
+%	ABSTRACT
+%----------------------------------------------------------------------------------------
+
+\Abstract{In this homework writeup we use the Singular Value Decomposition (SVD) and Principal Component Analysis (PCA) to remove redundant information and extract information about the movement of a mass-spring system from a series of video recordings. We test the performance of PCA on increasingly complex movements and on noisy measurements.}
+
+%----------------------------------------------------------------------------------------
+
+\begin{document}
+
+
+\flushbottom % Makes all text pages the same height
+
+\maketitle % Print the title and abstract box
+
+\tableofcontents % Print the contents section
+
+% \thispagestyle{empty} % Removes page numbering from the first page
+
+%----------------------------------------------------------------------------------------
+%	ARTICLE CONTENTS
+%----------------------------------------------------------------------------------------
+
+\section{Introduction}
+\label{sec:introduction}
+The purpose of this assignment is to practice cleaning up messy data and to better understand Principle Component Analysis (PCA) and the Singular Vale Decomposition (SVD). Prior to the course Nathan set up a classic physics system: a mass suspended from a spring. He then gave the mass four different initial pushes and had three people record the resulting motion from various angles. Furthermore during certain runs he had them introduce artificial noise by shaking their cameras. In the first instance he pushes the mass straight down and instructs the camera-holders to keep their instruments still. In the second he again pushes the mass straight down, but this time he has the recorders shake their cameras while they are filming, creating noise. Next he shoves the weight in such a way that it exhibits vertical and horizontal movement. Finally he pushes it so that it moves vertically and horizontally and also rotates.
+
+We have been given the twelve video files produced by observers and it is our objective to use them analyze the movement of the weight using PCA. We must first extract the positions of the weight throughout the videos. Then, using PCA, we aim to filter some noise from the observed mass locations, determine the best basis in which to represent the movement, and remove redundancy from the measurements.
+
+This writeup is structured as follows: in Section \ref{sec:theoretical_background} we give a brief review of the theory behind our techniques. Next we discuss our algorithm and its implementation in MATLAB in Section \ref{sec:algorithm_implementation_and_development} before discussing our numerical results in Section \ref{sec:computational_results}. Finally we make some closing remarks in Section \ref{sec:summary_and_conclusions}.
+
+% section introduction (end)
+
+
+\section{Theoretical Background} % (fold)
+\label{sec:theoretical_background}
+
+\subsection{The Singular Value Decomposition (SVD)}
+Let us interpret the transformation of a vector $\mathbf{x}$ by a matrix $\mathbf{A}$ (by left-multiplication) geometrically. This transformation can always be decomposed into a series of rotations, scalings, then more rotations, all in various orthogonal directions. \textit{The Singular Value Decomposition} of $\mathbf{A}$ uncovers these directions and the scaling factors associated with the rescalings. More concretely, the SVD of $\mathbf{A}$ is 
+
+\begin{equation}\label{eq:svd}
+\mathbf{A}= \mathbf{U}\boldsymbol{\Sigma} \mathbf{V}^*.
+\end{equation}
+
+If $\mathbf{A}$ is an $n\times m$ matrix then $\mathbf{U} \in \mathds{C}^{m\times m}$ and $\mathbf{V}\in\mathds{C}^{n\times n}$ are both unitary and $\boldsymbol{\Sigma}\in\mathds{R}^{n\times m}$ is diagonal with nonnegative entries on the diagonal (and are assumed to be in nonincreasing order). From this factorization of $\mbf{A}$ we see that its action on a vector is to first rotate it via left multiplication by the unitary matrix $\mbf{V}^*$, then to rescale it through multiplication by $\boldsymbol{\Sigma}$, and finally to rotate it again by multiplication by the unitary matrix $\mbf{U}$. There are a number of theorems regarding the SVD, most of which we will not list here. However, among the most important of them are the following:
+\begin{theorem}
+	Every matrix has a Singular Value Decomposition.
+\end{theorem}
+\begin{theorem}
+	For any $N$ so that $0\leq N\leq r$, we can define the partial sum
+	\begin{equation}
+		\mbf{A}_N = \sum^N_{j=1}\sigma_j \mbf{u_jv_j^*}.
+	\end{equation}
+	And if $N=\min\{m,n\}$, define $\sigma_{N+1}=0$. Then
+	\begin{equation}
+		\|\mbf{A}-\mbf{A}_N\|_2 = \sigma_{N+1}.
+	\end{equation}
+	Likewise, if using the Frobenius norm, then 
+	\begin{equation}
+		\|\mbf{A}-\mbf{A}_N\|_F = \sqrt{\sigma^2_{N+1}+\sigma^2_{N+2}+ \dots +\sigma^2_r}.
+	\end{equation}
+\end{theorem}
+Here $\mbf{u_i}$ and $\mbf{v_j}$ are the i-th and j-th columns of $\mbf{U}$ and $\mbf{V}$, respectively, $\sigma_j$ is the j-th diagonal entry of $\boldsymbol{\Sigma}$ (the j-th singular value of $\mbf{A}$), and $r=\mathrm{Rank}(\mbf{A})$.
+
+\subsection{Principal Component Analysis (PCA)}
+
+% section theoretical_background (end)
+
+
+\section{Algorithms Implementation and Development} % (fold)
+\label{sec:algorithm_implementation_and_development}
+We used two scripts to accomplish the major goals of this assignment. The first extracted the positions of the bucket throughout the videos and the second applied PCA to these positions. Both are outlined below.
+
+\subsection{Extracting Bucket Locations}
+The main technique we used to find the bucket positions was simply to follow the flashlight placed on top of the bucket. The pixels showing this flashlight were much whiter than the nearby pixels, allowing us to track its movement frame-by-frame. There were, however, some regions of the videos which had pixels that were sometimes whiter than that of the flashlight. To deal with this obstacle in each frame of the videos we simply searched for white pixels only within a small window of the previous flashlight location. This also has the advantage on cutting down on the computational cost of the algorithm, since we only need consider tiny subsets of the sizeable frames. For the method to work we are required to provide the position of the flashlight in the initial frame. It should be noted that in the fourth test, where the bucket is also spinning, the flashlight is only visible about a third of the time making this technique infeasible. Fortunately, the bucket has a large white section wrapping around its exterior. In the fourth test we simply follow this stripe instead of the flashlight as it is always visible. The stripe occupies a larger area in the videos than the light does and the detected location jumps around somewhat within this region which adds some noise to the extracted positions. But this is an acceptable price to pay considering the alternative of only being able to automatically locate the bucket a third of the time.
+
+In particular we carried out the following steps for each of the sets of three recordings.
+
+\subsection*{1. Locate the starting point of the bucket}
+To accomplish this we use a simple GUI which allows one to feed in the coordinates of the flashlight by clicking on it in a displayed version of the first frame. For the fourth test we click the white stripe instead.
+
+\subsection*{2. Track the movement of the bucket over the remaining frames}
+As mentioned before, to find the position of the flashlight in a given frame we search a small (rectangular) window around its previous location for the whitest point. Unfortunately we must customize the size of the window for each video since in each the bucket moves at different rates and the flashlight varies in intensity. One must make the window large enough to account for the movement of the bucket between frames, but not so large that another white point is mistaken for the flashlight. We also check that our window does not extend outside of the image, and if it does we limit its size accordingly. To ensure we did a satisfactory job of following the bucket we watch the video with the detected location superimposed over it.
+
+\subsection*{3. Save the measurements}
+We store the detected positions in .mat files for the second script to access. This way we do not have to run the algorithm every time we want access to the data.
+
+\subsection{Principle Component Analysis}
+Once the approximate bucket locations are known relative to each camera it is fairly straightforward to apply Principle Component Analysis to rid all these measurements of redundancy. Our main tool for accomplishing this is the SVD, but first we must clean up the data a bit. Since the videos were filmed at various angles the scales of the measured positions vary somewhat between cameras. The cameras were also not all started and stopped at the same instants in time so some videos include more frames than others. Recall that in order to use the SVD we need a set of observation vectors which all have the same length. 
+
+\subsection*{1. Normalize the positions so that the minimum height is 0 and the maximum is 1}
+We carry out this step for each video stream, in both the horizontal and vertical directions separately.
+
+\subsection*{2. Align the position vectors so that each starts at the same time}
+For each test we find the data stream which begins at the latest time (manually, by inspection of the measured positions) and remove some entries from the other position vectors so that they all start at approximately the same time.
+
+\subsection*{3. Enforce that every position vector be the same length}
+We find which camera stops recording first and remove entries in the position vectors corresponding to measurements taken after it has stopped. Once the number of recorded positions is known we also normalize time so that the first set of measurements occur at $t=0$ and the final set occurs at $t=1$.
+
+\subsection*{4. Stack the measurements in a data matrix $X$ and apply Principal Component Analysis}
+In order to prepare $X$ for PCA we first set the mean and variance of each of its rows to 0 and 1, respectively. We then take the SVD of $X$ and analyze the matrices involved in the decomposition.
+
+% section algorithm_implementation_and_development (end)
+
+
+\section{Computational Results} % (fold)
+\label{sec:computational_results}
+
+\subsection{Test 1: Ideal case}
+
+\subsection{Test 2: Noisy case}
+
+\subsection{Test 3: Horizontal displacement}
+
+\subsection{Test 4: Horizontal displacement and rotation}
+
+
+% section computational_results (end)
+
+\section{Summary and Conclusions} % (fold)
+\label{sec:summary_and_conclusions}
+
+
+% section summary_and_conclusions (end)
+
+
+
+
+%------------------------------------------------
+\phantomsection
+\section*{Appendix A: MATLAB Functions} % The \section*{} command stops section numbering
+Here we outline the nonstandard MATLAB functions used to complete this assignment.
+\vskip 0.5cm
+
+\noindent \texttt{\textbf{exist(filename,option)}}: Returns true if the object at the location specified by \texttt{filename} of the type specified by \texttt{option} exists and returns false otherwise. For this assignment we use it to check whether or not certain variables exist so we can avoid redundant costly \texttt{load} commands.
+\vskip 0.3cm
+
+\noindent \texttt{\textbf{[R,C] = find(X)}}: Locates the nonzero entries stored in the 2-dimensional array \texttt{A} and stores their row indices in \texttt{R} and their column indices in \texttt{C}.
+\vskip 0.3cm
+
+\noindent \texttt{\textbf{B = repmat(A,n,m)}}: Creates a matrix \texttt{B} out of \texttt{n}$\cdot$\texttt{m} copies of \texttt{A} (\texttt{n} copies in the vertical direction and \texttt{m} in the horizontal direction).
+\vskip 0.3cm
+
+\noindent \texttt{\textbf{[U,S,V] = svd(A)}}: Computes the Singular Value Decomposition of the matrix \texttt{A}. \texttt{U}, \texttt{V}, and \texttt{S} are the matrices containing the left singular vectors, the right singular vectors, and the singular values of \texttt{A}, respectively. \texttt{A} = \texttt{USV*} up to machine precision in MATLAB.
+\vskip 0.3cm
+
+\noindent \texttt{\textbf{}}: 
+\vskip 0.3cm
+
+
+% \noindent \texttt{\textbf{}}: 
+% \vskip 0.3cm
+
+
+\addcontentsline{toc}{section}{Appendix A} % Adds this section to the table of contents
+
+\phantomsection
+\section*{Appendix B: MATLAB Code}
+See the following pages published in MATLAB for the implementation of the algorithm presented in Section \ref{sec:algorithm_implementation_and_development}.
+
+\addcontentsline{toc}{section}{Appendix B}
+
+
+
+%----------------------------------------------------------------------------------------
+%	REFERENCE LIST
+%----------------------------------------------------------------------------------------
+% \phantomsection
+% \bibliographystyle{unsrt}
+% \bibliography{sample}
+
+%----------------------------------------------------------------------------------------
+
+\end{document}

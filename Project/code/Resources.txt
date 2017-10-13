@@ -1,0 +1,7 @@
+List of sources used for 582 project
+
+-Stop words: http://www.ranks.nl/stopwords
+	-"Long Stopword list"
+
+-Text Documents: https://www.gutenberg.org
+

@@ -1,0 +1,370 @@
+% Amath 582 HW 3
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Stylish Article
+% LaTeX Template
+% Version 2.1 (1/10/15)
+%
+% This template has been downloaded from:
+% http://www.LaTeXTemplates.com
+%
+% Original author:
+% Mathias Legrand (legrand.mathias@gmail.com) 
+% With extensive modifications by:
+% Vel (vel@latextemplates.com)
+%
+% License:
+% CC BY-NC-SA 3.0 (http://creativecommons.org/licenses/by-nc-sa/3.0/)
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+
+\documentclass[fleqn,10pt]{../SelfArx} % Document font size and equations flushed left
+
+\usepackage[english]{babel} % Specify a different language here - english by default
+
+\usepackage{amsmath}
+\usepackage{bm}			% For bold symbols
+\usepackage{graphicx}	% For images and figures
+
+%----------------------------------------------------------------------------------------
+%	COLUMNS
+%----------------------------------------------------------------------------------------
+
+\setlength{\columnsep}{0.55cm} % Distance between the two columns of text
+\setlength{\fboxrule}{0.75pt} % Width of the border around the abstract
+
+%----------------------------------------------------------------------------------------
+%	COLORS
+%----------------------------------------------------------------------------------------
+
+\definecolor{color1}{RGB}{0,0,90} % Color of the article title and sections
+\definecolor{color2}{RGB}{0,20,20} % Color of the boxes behind the abstract and headings
+
+%----------------------------------------------------------------------------------------
+%	HYPERLINKS
+%----------------------------------------------------------------------------------------
+
+\usepackage{hyperref} % Required for hyperlinks
+\hypersetup{hidelinks,colorlinks,breaklinks=true,urlcolor=color2,citecolor=color1,linkcolor=color1,bookmarksopen=false,pdftitle={Title},pdfauthor={Author}}
+
+%----------------------------------------------------------------------------------------
+%	ARTICLE INFORMATION
+%----------------------------------------------------------------------------------------
+
+\JournalInfo{Amath 582 HW 3} % Journal information
+\Archive{Brian de Silva} % Additional notes (e.g. copyright, DOI, review/research article)
+
+\PaperTitle{Amath 582 Homework 3: Trouble at the Zoo \\ \small{Due: February 4, 2016}} % Article title
+
+\Authors{Brian de Silva\textsuperscript{1}} % Authors
+\affiliation{\textsuperscript{1}\textit{Department of Applied Mathematics, University of Washington, Seattle}} % Author affiliation
+
+\Keywords{} % Keywords - if you don't want any simply remove all the text between the curly brackets
+\newcommand{\keywordname}{Keywords} % Defines the keywords heading name
+
+%----------------------------------------------------------------------------------------
+%	ABSTRACT
+%----------------------------------------------------------------------------------------
+
+\Abstract{In this homework writeup we use the Fast Fourier Transform to filter out high frequency components from noisy images in order to clean them up. We then use localized diffusion to smooth small corrupted domains in two images. This allows them to better blend in with their respective images to create more natural looking pictures.}
+
+%----------------------------------------------------------------------------------------
+
+\begin{document}
+
+\flushbottom % Makes all text pages the same height
+
+\maketitle % Print the title and abstract box
+
+\tableofcontents % Print the contents section
+
+% \thispagestyle{empty} % Removes page numbering from the first page
+
+%----------------------------------------------------------------------------------------
+%	ARTICLE CONTENTS
+%----------------------------------------------------------------------------------------
+
+\section{Introduction}
+\label{sec:introduction}
+Derek Zoolander is in trouble! Ugly protesters are (literally) trying to tarnish his good image by sabotaging his touched-up photos with noise. Even worse, he did something completely rash and went into a photo shoot while nasty skin condition was flaring up on his face. In this assignment we attempt to restore the corrupted pictures to their former glory through the filtering of high frequency content using the Fast Fourier Transform (FFT). Once that crisis has been dealt with we use localized diffusion to remove the rash from Derek's photos and ultimately save the day.
+
+This writeup is structured as follows: in Section \ref{sec:theoretical_background} we give a brief review of the theory behind our techniques. Next we discuss our algorithms and their implementations in MATLAB in Section \ref{sec:algorithms_implementation_and_development} before discussing our numerical results in Section \ref{sec:computational_results}. Finally we make some closing remarks in Section \ref{sec:summary_and_conclusions}.
+
+% section introduction (end)
+
+
+\section{Theoretical Background} % (fold)
+\label{sec:theoretical_background}
+% Denoising images with the FFT
+\subsection{Denoising images with the Fast Fourier Transform}
+In much the same way we previously used the FFT to eliminate excess noise and uncover underlying signals from ultrasound measurements in Homework 1, we can also remove noise from images. To do so one first represents an image as a matrix, $U$, whose entries correspond to values at different pixels. For simplicity assume that the image is black and white. Then we pair with each pixel a scalar value between 0 and 255 inclusive, which gives the intensity of the light at that point. A value of 0 means that pixel is completely black, and a value of 255 means it is as white as possible. Values strictly between the two correspond to various shades of gray.
+
+Given $U$ one can take its 2-dimensional Discrete Fourier Transform to obtain its representation, $\hat{U} $, in the frequency domain. One may then determine the center frequency (the one of largest magnitude) and filter out frequencies which are not close to it, in some sense of the word ``close''. For natural images the center frequency is typically the one with wave components both 0, i.e. the lowest possible frequency in both the $x$ and $y$ directions. For this assignment we tested Gaussian and Shannon filters which remove frequencies which are not close to the center frequency, e.g. the high frequency content is removed if we are working with natural images. We also experiment with a thresholding filter which zeroes out Fourier components with magnitudes below some specified percentage of the magnitude of the center frequency.
+
+
+\subsection{Denoising images with diffusion}
+Another method of denoising an image is to cause a small amount of diffusion using the 2-dimensional heat equation:
+\begin{equation}\label{eq:heat}
+	u_t = D\nabla^2u = D(u_{xx}+u_{yy})
+\end{equation}
+where $u(x,y)$ is the image in question, $D=D(x,y)$ is a diffusion coefficient, and some boundary conditions must be imposed. (\ref{eq:heat}) models the spread of heat throughout a substance. $D(x,y)$ controls the rate of heat spread at each point $(x,y)$. We can discretize (\ref{eq:heat}) using the standard second order finite difference approximations
+\begin{align}\label{eq:fdx}
+\frac{\partial^2 u}{\partial x^2} &\approx \frac{u(x+\Delta x,y)-2u(x,y)+u(x-\Delta x,y)}{\Delta x^2} \\
+\label{eq:fdy}
+\frac{\partial^2 u}{\partial y^2} &\approx \frac{u(x,y+\Delta y)-2u(x,y)+u(x,y-\Delta y)}{\Delta y^2}
+\end{align}
+
+to obtain a system of coupled ODEs of the form
+\begin{equation}\label{eq:ode}
+	\frac{d\boldsymbol{u}}{d t} = \boldsymbol{L}\boldsymbol{u}
+\end{equation}
+for a sparse matrix $\boldsymbol{L}$ constructed using (\ref{eq:fdx}) and (\ref{eq:fdy}). In (\ref{eq:ode}) we have discretized the spatial domain so that if $u(x_n,y_m) = u_{nm}$, then 
+\begin{equation}
+	\boldsymbol{u} = \left( \begin{array}{c} u_{11} \\ u_{12} \\ \vdots \\ u_{1n} \\ u_{21} \\ u_{22} \\ \vdots \\ u_{n(n-1)} \\ u_{nn} \end{array} \right).
+\end{equation}
+We can easily compute numerical approximations to the solution of (\ref{eq:ode}) using any standard time-stepping scheme (we use a fourth order predictor-corrector Runge-Kutta method). Stacking the entries of the array of pixel values associated with an image into a vector allows us to feed the image into the ODE solver as the initial condition. Advancing time causes diffusion in the image.
+
+One desirable property of the heat equation (\ref{eq:heat}) is that the highest frequency components in the initial data are the most rapidly damped out by diffusion. This phenomenon has a particularly noticeable effect on image noise, which often consists of high frequencies. One can generally evolve time a short enough amount of time so as not to cause too much diffusion and degrade the quality of an image, but long enough to diffuse much of the noise. One can also choose to define the diffusion coefficient $D(x,y)$ so that diffusion is localized, e.g. by choosing it to be 0 in regions where diffusion should not occur and making it nonzero elsewhere. This is the approach we take to complete Task 2.
+
+% section theoretical_background (end)
+
+
+\section{Algorithms Implementation and Development} % (fold)
+\label{sec:algorithms_implementation_and_development}
+In this section we describe the scripts developed in MATLAB to clean up the sabotaged images of Derek and to hide his rash using filtering and diffusion. Overviews of the two algorithms are given below and are accompanied by relevant details.
+
+\subsection{Task 1}
+\label{sec:algorithms_implementation_and_development_task1}
+Below we outline the MATLAB routine written to denoise the corrupted images of Derek. Our primary tool is filtering frequencies of lesser importance (often high frequencies) in the Fourier domain.
+
+\subsection*{1. Read in the images and take their DFTs}
+We split the color image into its red, green, and blue (RGB) components and take each of their DFTs separately. From plots of the magnitudes of the frequency components we can determine the center frequencies and appropriate filters to employ.
+
+\subsection*{2. Filter out the Fourier components of lesser importance}
+Typically the lower frequencies have larger weight and the very high frequencies correspond to noise and regions of sharp contrast. We filter out many of the high frequency content in the hopes of eliminating noise. For this assignment we experimented with a Gaussian filter, a Shannon (step function) filter, and a thresholding filter. The third of these simply removes all frequency components which have magnitudes less than some specified fraction of the magnitude of the center frequency. We apply filters to the DFTs of the red, green, and blue components of the color image separately.
+
+\subsection*{3. Invert the filtered transforms and view the (hopefully) denoised pictures}
+We recombine the three components of the color photo back into a single color image.
+
+\subsection{Task 2}
+\label{sec:algorithms_implementation_and_development_task2}
+Here we describe the algorithm designed to remove the rash from Derek's otherwise pristine pictures. Our workhorse will be using the 2-D heat equation to induce diffusion of the pixels making up the rash.
+
+\subsection*{1. Read in the images}
+Again we split the color image into its RGB components.
+
+\subsection*{2. Discretize the 2-D heat equation by forming the 2-D discrete Laplacian matrix}
+As detailed in Section \ref{sec:theoretical_background} discretizing the Laplacian differential operator we obtain a sparse matrix $\boldsymbol{L}$. So as not to degrade the outstanding quality of the images away from the rash we choose a non-constant diffusion coefficient $k = k(x,y)$ which is 0 outside of the rash's domain and $0.0005$ inside it. This prevents any diffusion from occurring anywhere but Derek's rash.
+
+\subsection*{3. Numerically solve the ODEs out to some time, using the images as the initial conditions}
+We use MATLAB's build in fourth order adaptive ODE solver \texttt{ode45} to advance the solution in time. See Appendix A for more details on \texttt{ode45}.
+The further in time we evolve the system the more diffusion takes place.
+
+% section algorithm_implementation_and_development (end)
+
+
+\section{Computational Results} % (fold)
+\label{sec:computational_results}
+In this section we begin by giving an overview of the results of our attempts to denoise the two sabotaged pictures of Derek's face. We discuss the effects different filters have on the cleaned up images. Next we showcase our success at removing the unfortunate rash from Derek's other two head shots.
+\subsection{Task 1 - denoising corrupted photos}
+
+
+% Fourier components
+\begin{figure}
+\centering
+\includegraphics[width=\linewidth]{fft_gauss_bw}
+\caption{The frequency components of the noisy black and white image. Top: before filtering. Bottom: after Gaussian filter has been applied (width=0.0001)}
+\label{fig:fft_gauss_bw}
+\end{figure}
+\begin{figure}
+\centering
+\includegraphics[width=\linewidth]{fft_shannon}
+\caption{The frequency components of the noisy black and white image. Top: before filtering. Bottom: after Shannon filter has been applied (width=75)}
+\label{fig:fft_shannon}
+\end{figure}
+\begin{figure}
+\centering
+\includegraphics[width=\linewidth]{fft_thresh}
+\caption{The frequency components of the noisy black and white image. Top: before filtering. Bottom: after thresholding filter has been applied (every component with magnitude less than 60\% of max magnitude is zeroed out)}
+\label{fig:fft_thresh}
+\end{figure}
+
+
+First we visualize the FFTs of the two noisy images and the effects the three filters have upon them. Figure \ref{fig:fft_gauss_bw} plots the natural logarithm of the magnitudes of the frequency components of the noisy black and white image, both before and after a Gaussian filter has been used. Notice how most of the information seems to be contained near the center of the image. For this reason we center our Gaussian and Shannon filters about the ``brightest'' point. In the bottom of Figures \ref{fig:fft_gauss_bw} and \ref{fig:fft_shannon} we see that the two filters eliminate frequency content away from the center Fourier component. With the Gaussian filter we witness a smooth, but rapid decay of the components as we move away from the center, whereas the Shannon filter has a drop off 75 pixels away from the center frequency. One could argue that more of the noise is allowed to persist when the Gaussian filter is used since the figures suggest it damps out fewer of them than the Shannon filter, but we will see that they achieve similar performance. The thresholding filter may eliminate the most frequency components as is demonstrated in Figure \ref{fig:fft_thresh}. However, unlike the Gaussian and Shannon filters, it does not target only high frequencies. Many low frequencies are eliminated and many high frequencies survive the filtering process. This will have repercussions when the inverse FFT is taken.
+
+\begin{figure}
+\centering
+\includegraphics[width=\linewidth]{fft_gauss}
+\caption{The frequency components of the red (top), green (middle), and blue (bottom) components of the noisy color image. Left column: before filtering. Right column: after Gaussian filter has been applied (width=0.0001) }
+\label{fig:fft_gauss}
+\end{figure}
+
+For completeness we also plot the FFTs of the RGB components of the color image before and after Gaussian filtering in Figure \ref{fig:fft_gauss}. These plots look qualitatively very similar to their black and white image counterparts.
+
+% Denoised images
+\begin{figure}
+\centering
+\includegraphics[width=\linewidth]{filtered_gauss_bw}
+\caption{The original and denoised black and white pictures of Derek using a Gaussian filter}
+\label{fig:filtered_gauss_bw}
+\end{figure}
+\begin{figure}
+\centering
+\includegraphics[width=\linewidth]{filtered_gauss_color}
+\caption{The original and denoised color pictures of Derek using a Gaussian filter}
+\label{fig:filtered_gauss_color}
+\end{figure}
+\begin{figure}
+\centering
+\includegraphics[width=\linewidth]{filtered_shannon_color}
+\caption{The original and denoised color pictures of Derek using a Shannon filter}
+\label{fig:filtered_shannon_color}
+\end{figure}
+\begin{figure}
+\centering
+\includegraphics[width=\linewidth]{filtered_thresh_color}
+\caption{The original and denoised color pictures of Derek using a thresholding filter}
+\label{fig:filtered_thresh_color}
+\end{figure}
+
+
+
+
+\subsection{Task 2 - cleaning up a small corrupted region using diffusion}
+
+\begin{figure}
+\centering
+\includegraphics[width=\linewidth]{diffusion_bwt0}
+\caption{Diffusion applied only to the rash region of black and white photo of Derek at $t=0$}
+\label{fig:diffusion_bwt0}
+\end{figure}
+\begin{figure}
+\centering
+\includegraphics[width=\linewidth]{diffusion_bwt15}
+\caption{Diffusion applied only to the rash region of black and white photo of Derek at $t=0.015$}
+\label{fig:diffusion_bwt15}
+\end{figure}
+\begin{figure}
+\centering
+\includegraphics[width=\linewidth]{diffusion_bwt3}
+\caption{Diffusion applied only to the rash region of black and white photo of Derek at $t=0.03$}
+\label{fig:diffusion_bwt3}
+\end{figure}
+\begin{figure}
+\centering
+\includegraphics[width=\linewidth]{diffusion_bwt45}
+\caption{Diffusion applied only to the rash region of black and white photo of Derek at $t=0.045$}
+\label{fig:diffusion_bwt45}
+\end{figure}
+
+The method presented in Section \ref{sec:algorithms_implementation_and_development_task2} was very effective at removing the rash from Derek's face, both in his color and black and white photos. Figures \ref{fig:diffusion_bwt0} - \ref{fig:diffusion_bwt45} show how the black and white image changes as the heat equation is applied to it. Time 0 corresponds to the original picture, rash included. Already by $t=0.015$ we see a marked increase in the smoothness of the appearance of the rash region in Figure \ref{fig:diffusion_bwt15}. By $t=0.045$ you can hardly tell there was ever a rash to begin with. Observe also that the parts of the image outside of the rash region do not change at all over time. This is due to the fact that we chose a piecewise constant diffusion coefficient which is 0 away from the rash, meaning that the heat equation does not affect this area since it then reduces to $u_t = 0$.
+
+\begin{figure}
+\centering
+\includegraphics[width=\linewidth]{diffusion_colort0}
+\caption{Diffusion applied only to the rash region of color photo of Derek at $t=0$}
+\label{fig:diffusion_colort0}
+\end{figure}
+\begin{figure}
+\centering
+\includegraphics[width=\linewidth]{diffusion_colort15}
+\caption{Diffusion applied only to the rash region of color photo of Derek at $t=0.015$}
+\label{fig:diffusion_colort15}
+\end{figure}
+\begin{figure}
+\centering
+\includegraphics[width=\linewidth]{diffusion_colort3}
+\caption{Diffusion applied only to the rash region of color photo of Derek at $t=0.03$}
+\label{fig:diffusion_colort3}
+\end{figure}
+\begin{figure}
+\centering
+\includegraphics[width=\linewidth]{diffusion_colort45}
+\caption{Diffusion applied only to the rash region of color photo of Derek at $t=0.045$}
+\label{fig:diffusion_colort45}
+\end{figure}
+
+Figures \ref{fig:diffusion_colort0} - \ref{fig:diffusion_colort45} give snapshots of the solutions of the heat equation using the color picture in Figure \ref{fig:diffusion_colort0} as initial data. Again the method performs very well and produces satisfactory results by $t=0.03$ (see Figure \ref{fig:diffusion_colort3}). If one looks closely at the rash region, in Figure \ref{fig:diffusion_colort45}, say, it is easier to spot artifacts of our diffusive smoothing. In particular the pixels in the square where diffusion was applied are a slightly different color than their neighbors outside the rash region. It may be possible to avoid this effect by slowly increasing the size of the domain where diffusion takes place so that the colors better blend together.
+
+% section computational_results (end)
+
+\section{Summary and Conclusions} % (fold)
+\label{sec:summary_and_conclusions}
+We succeeded in helping Derek save face! In this writeup we developed a method based on filtering in the Fourier domain to clean up noisy pictures. We discussed the effects of using different filters and plotted our denoised pictures. % TODO: write conclusions about filters
+
+ We also wrote and described an algorithm for removing evidence of a rash from Derek's face in both color and black and white photos using diffusion. For the given pictures a diffusion coefficient of 0.0005 inside the rash region was sufficient to smooth the rash by $t=0.045$. Choosing a diffusion coefficient which was 0 outside this region allowed us to preserve the high quality of the rest of the image while applying diffusion just where we wanted it. Finally we show off some of the touched up photos.
+
+% section summary_and_conclusions (end)
+
+
+
+
+%------------------------------------------------
+\phantomsection
+\section*{Appendix A: MATLAB Functions} % The \section*{} command stops section numbering
+Here we outline the nonstandard MATLAB functions used to complete this assignment.
+\vskip 0.5cm
+
+\noindent \texttt{\textbf{cat(dim,A,B,C)}}: Concatenate the arrays \texttt{A}, \texttt{B}, and \texttt{C} along the dimension specified by \texttt{dim}.
+\vskip 0.3cm
+
+\noindent \texttt{\textbf{fft2(X)}}: Given a $2-$dimensional array of data, \texttt{X}, \texttt{fft2(X)} returns the $2-$dimensional DFT of \texttt{X}. The output has the same size as the input. To plot the frequency components given by \texttt{fft2} one should first apply the \texttt{fftshift} command as \texttt{fft2} returns a shifted version of the frequency components.
+\vskip 0.3cm
+
+\noindent \texttt{\textbf{fftshift(v)}}: This command shifts the vector/matrix output of \texttt{fft}, \texttt{fft2}, and \texttt{fftn} so that the 0 frequency lies at the center of the vector/matrix. For example, in one dimension \texttt{v = fft(data)} is a vector and \texttt{fftshift(v)} swaps the first and second halves of \texttt{v}. This command is useful for plotting the FFT of data. 
+\vskip 0.3cm
+
+\noindent \texttt{\textbf{imread(filename,format)}}: Reads in an image file with format \texttt{format} from the location specified by the string \texttt{filename} and stores the result in a two or three dimensional array. If it is a grayscale image then it saves a 2-dimensional array with an entry for each pixel in the image. If it is a color image it saves a 3-dimensional array composed of three 2-dimensional arrays giving the red, green, and blue components of each pixel.
+\vskip 0.3cm
+
+\noindent \texttt{\textbf{kron(A,B)}}: Returns the Kronecker-tensor product of the matrices \texttt{A} and \texttt{B}. If we denote the entries of \texttt{A} by $a_{i,j}$ then
+\[
+\texttt{kron(A,B)} = \left( \begin{array}{cccc}
+a_{1,1}\texttt{B} & a_{1,2}\texttt{B} & \cdots & a_{1,n}\texttt{B} \\
+a_{2,1}\texttt{B} & a_{2,2}\texttt{B} & \cdots & \vdots \\
+\vdots & & \ddots &  \\
+a_{m,1}\texttt{B} & \cdots& & a_{m,n}\texttt{B} \end{array} \right).
+\]
+\vskip 0.3cm
+
+\noindent \texttt{\textbf{ode45(odefun,tspan,y0)}}: Uses a fourth order adaptive Runge-Kutta time-stepping scheme to find a numerical solution to the following ordinary differential equation at all the times specified in the vector \texttt{tspan}
+\[
+	\left \{ \begin{array}{l} \frac{dy}{dt} = \texttt{odefun}(t,y), \\
+	y(t_0) = \texttt{y0}. \end{array}\right .
+\]
+In the above $y$ can be a vector and \texttt{odefun} may be vector-valued. The outputs \texttt{t} and \texttt{Y} in the expression \texttt{[t, Y] = ode45(odefun,tspan,y0)} are a vector of the times when the numerical solution is known (\texttt{t} = \texttt{tspan} if \texttt{length(tspan)} $>~2$) and a matrix containing the numerical solution at each time it was requested.
+\vskip 0.3cm
+
+\noindent \texttt{\textbf{spdiags(V,D,n,m)}}: Produces an \texttt{n}$\times$\texttt{m} sparse matrix with entries given by the $i^{\mathrm{th}}$ column of \texttt{V} entered \texttt{D(i)} off the diagonal, for $i=1,~2,~\dots,$ \texttt{length(D)}. That is the $i^{\mathrm{th}}$ column of \texttt{V} is placed along the $D(i)^{\mathrm{th}}$ superdiagonal (or subdiagonal if \texttt{D(i)}$<0$) of the output.
+\vskip 0.3cm
+
+\noindent \texttt{\textbf{speye(n)}}: Generates the sparse representation of the $n\times n$ identity matrix. 
+\vskip 0.3cm
+
+% \noindent \texttt{\textbf{}}: 
+% \vskip 0.3cm
+
+
+\addcontentsline{toc}{section}{Appendix A} % Adds this section to the table of contents
+
+\phantomsection
+\section*{Appendix B: MATLAB Code}
+See the following pages published in MATLAB for the implementation of the algorithm presented in Section \ref{sec:algorithms_implementation_and_development}.
+
+\addcontentsline{toc}{section}{Appendix B}
+
+
+
+%----------------------------------------------------------------------------------------
+%	REFERENCE LIST
+%----------------------------------------------------------------------------------------
+% \phantomsection
+% \bibliographystyle{unsrt}
+% \bibliography{sample}
+
+%----------------------------------------------------------------------------------------
+
+\end{document}

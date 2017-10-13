@@ -1,0 +1,253 @@
+% Amath 582 Project Writeup
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Stylish Article
+% LaTeX Template
+% Version 2.1 (1/10/15)
+%
+% This template has been downloaded from:
+% http://www.LaTeXTemplates.com
+%
+% Original author:
+% Mathias Legrand (legrand.mathias@gmail.com) 
+% With extensive modifications by:
+% Vel (vel@latextemplates.com)
+%
+% License:
+% CC BY-NC-SA 3.0 (http://creativecommons.org/licenses/by-nc-sa/3.0/)
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+
+\documentclass[fleqn,10pt]{../SelfArx} % Document font size and equations flushed left
+
+\usepackage[english]{babel} % Specify a different language here - english by default
+
+\usepackage{amsmath}
+\usepackage{bm}			% For bold symbols
+\usepackage{graphicx}	% For images and figures
+\usepackage{dsfont}		% For reals, complex, etc.
+\usepackage{blkarray} 	% For blockarray
+
+
+%-----------------------------------------------------------------------------------
+%	Brian's commands:
+\newcommand{\mbf}[1]{\mathbf{#1}}
+\newtheorem{theorem}{Theorem}
+
+%----------------------------------------------------------------------------------
+
+
+%----------------------------------------------------------------------------------------
+%	COLUMNS
+%----------------------------------------------------------------------------------------
+
+\setlength{\columnsep}{0.55cm} % Distance between the two columns of text
+\setlength{\fboxrule}{0.75pt} % Width of the border around the abstract
+
+%----------------------------------------------------------------------------------------
+%	COLORS
+%----------------------------------------------------------------------------------------
+
+\definecolor{color1}{RGB}{0,0,90} % Color of the article title and sections
+\definecolor{color2}{RGB}{0,20,20} % Color of the boxes behind the abstract and headings
+
+%----------------------------------------------------------------------------------------
+%	HYPERLINKS
+%----------------------------------------------------------------------------------------
+
+\usepackage{hyperref} % Required for hyperlinks
+\hypersetup{hidelinks,colorlinks,breaklinks=true,urlcolor=color2,citecolor=color1,linkcolor=color1,bookmarksopen=false,pdftitle={Title},pdfauthor={Author}}
+
+%----------------------------------------------------------------------------------------
+%	ARTICLE INFORMATION
+%----------------------------------------------------------------------------------------
+
+\JournalInfo{Classifying Documents Using NMF} % Journal information
+\Archive{Brian de Silva} % Additional notes (e.g. copyright, DOI, review/research article)
+
+\PaperTitle{Classifying Documents Using Nonnegative Matrix Factorization \\ \small{Due: March 17, 2016}} % Article title
+
+\Authors{Brian de Silva\textsuperscript{1}} % Authors
+\affiliation{\textsuperscript{1}\textit{Department of Applied Mathematics, University of Washington, Seattle}} % Author affiliation
+
+\Keywords{} % Keywords - if you don't want any simply remove all the text between the curly brackets
+\newcommand{\keywordname}{Keywords} % Defines the keywords heading name
+
+%----------------------------------------------------------------------------------------
+%	ABSTRACT
+%----------------------------------------------------------------------------------------
+
+\Abstract{This report is a component of the final project for AMath 582, which shares the same title. Here we give an overview of the techniques employed to attempt to cluster/classify text documents using nonnegative matrix factorization (NMF). In particular, a few key modifications to the ``naive'' approach improved clustering performance significantly, but many other methods were tested before these were discovered. It is the purpose of this writeup to discuss the many failed and few successful techniques used throughout the course of this endeavor.}
+
+%----------------------------------------------------------------------------------------
+
+\begin{document}
+
+
+\flushbottom % Makes all text pages the same height
+
+\maketitle % Print the title and abstract box
+
+\tableofcontents % Print the contents section
+
+% \thispagestyle{empty} % Removes page numbering from the first page
+
+%----------------------------------------------------------------------------------------
+%	ARTICLE CONTENTS
+%----------------------------------------------------------------------------------------
+
+\section{Introduction}
+\label{sec:introduction}
+For this project we manually collected a set of text documents from the Project 
+Gutenberg website (\url{https://www.gutenberg.org}), given below.
+
+\begin{itemize}
+\item Historical texts
+	\begin{itemize}
+		\item \textit{History of the Seventh Ohio Volunteer Cavalry} by R. C. Rankin
+		\item \textit{History of Company E of the Sixth Minnesota Regiment of Volunteer Infantry} by Alfred J. Hill
+		\item \textit{Abraham Lincoln and the Union A Chronicle of the Embattled North} by Nathaniel W. Stephenson
+	\end{itemize}
+
+\item Scientific texts
+	\begin{itemize}
+		\item \textit{On The Origin of Species} by Charles Darwin
+		\item \textit{The Life-Story of Insects} by Geo. H. Carpenter
+		\item \textit{The Chemistry of Food and Nutrition} by A. W. Duncan
+	\end{itemize}
+\end{itemize}
+
+Every text was broken up into five equi-length text files with some books being much longer than others. The goal of the project was to take these text files as input and to attempt to cluster and/or classify them based on their content. In order to perform clustering/classification we must interpret the documents in a mathematical setting. To this end we use the \textbf{bag-of-words} approach to model the documents as word-count vectors with nonnegative entries. Each entry corresponds to the number of times a word from some dictionary appears in the document. We could attempt to cluster the documents in terms of their word-count vectors, but this turns out to be ineffective. Rather we will generate a more ideal representation for the documents using \textbf{Nonnegative Matrix Factorization} (NMF) \cite{shahnaz2006document}. Given a set of documents, or a \textit{corpus}, we can construct word-count vectors for each then concatenate them into a \textit{histogram matrix}, $H$, which has columns that are word-count vectors for the documents. We then compute the Nonnegative Matrix Factorization of the Histogram matrix and use its output for our analysis.
+
+The \textbf{Nonnegative Matrix Factorization} of a matrix $H$ is an approximate decomposition of $H$ into two (often low-rank) matrices with nonnegative entries such that $H\approx UV^T$.\
+% \begin{equation*}
+% \begin{blockarray}{ccccc}
+% 	& & \text{Docs.} & & \\
+% 	\begin{block}{c[ccc]c}
+% 		& & & & \\
+% 		& & & & \\
+% 		\text{Words} & & \text{H} & & ~\approx \\
+% 		& & & & \\
+% 		& & & & \\
+% 	\end{block}
+% \end{blockarray}
+% % \approx
+% \begin{blockarray}{cc}
+% 	& \text{Topics} \\
+% 	\begin{block}{c[c]}
+% 		& \\
+% 		& \\
+% 		\text{Words} & \text{U} \\
+% 		& \\
+% 		& \\
+% 	\end{block}
+% \end{blockarray}
+% \begin{blockarray}{cccccc}
+% 	& & & \text{Docs.} & & \\
+% 	\begin{block}{c[ccccc]}
+% 		\text{Topics} & & & \text{V}^{\text{T}} & & \\
+% 	\end{block}
+% \end{blockarray}
+% \end{equation*}
+The columns of $U$ give the ``topics'' present in the documents of the corpus and the columns of $V^T$ give the coordinates of each document in this topic basis. We call the column of $V^T$ corresponding to a document that document's ``topic vector''. It is this representation of the documents we use to cluster/classify them. Since the NMF gives a low-rank approximation we might hope that it extracts some underlying structure from the histogram matrix, and by extension, the corpus. Once it has been computed we apply k-means clustering on the topic vectors, though more sophisticated clustering routines may be used.
+
+\subsection{Algorithm Overview}\label{sec:alg_overview}
+Here we present a high-level summary of the steps involved in our algorithm:
+\begin{enumerate}
+	\item Construct the dictionary and histogram matrix $H$ (using tf-idf)
+	\item Use NMF to approximately decompose $H$ into topics and topic vectors
+	\item Apply Gram reweighting to topic vectors
+	\item Cluster the documents using their topic representations with the k-means algorithm
+\end{enumerate}
+
+The remainder of this writeup follows the steps in the algorithm, discussing both ideas which failed to pan out and those which improved performance. Section~\ref{sec:histogram} corresponds to construction of the dictionary and histogram matrix, Section~\ref{sec:nmf} to computing the NMF of the histogram matrix, Section~\ref{sec:gram} to the Gram matrix reweighting (which has yet to be discussed), and Section~\ref{sec:clustering} to clustering the documents. Finally we give some concluding remarks in Section~\ref{sec:conclusion}.
+
+% This writeup is structured as follows: in Section \ref{sec:theoretical_background} we give a brief review of the theory behind our techniques. Next we discuss our algorithm and its implementation in MATLAB in Section \ref{sec:algorithm_implementation_and_development} before discussing our numerical results in Section \ref{sec:computational_results}. Finally we make some closing remarks in Section \ref{sec:summary_and_conclusions}.
+
+% section introduction (end)
+
+
+\section{The Histogram Matrix} % (fold)
+\label{sec:histogram}
+There were two major advancements that occurred in this phase of the algorithm. The first has to do with the forming of the dictionary of words. There are a large number of words that appear extremely frequently in the English language. Words such as ``and'', ``the'', and ``a'' are present in most sentences across all the documents in the corpus. Therefore they are often the words with the highest word counts in each of the documents which leads to topics which are dominated by them. While it can be interesting to infer information about various authors' writing styles from the combinations of these words they use, these types of topics do not tell us much about the true themes present in the corpus, themes such as chemistry, Abraham Lincoln, and insects. In order to deal with this issue we simply removed the troublesome ``stopwords'' after constructing the dictionary, but before finding word counts. We found a list of stopwords from the following website \url{http://www.ranks.nl/stopwords} (the ``Long Stopword List''). This turned out to be an effective means of dealing with the problem.
+
+
+As was mentioned briefly in Section~\ref{sec:introduction}, many of the documents were much longer than others. The longer documents inherently contain more words, giving their word-count vectors larger entries. After applying NMF to the histogram matrix we found that the topics were heavily biased toward these long documents. In order to remedy this we reweighted the word-count vectors using a technique called term frequency-inverse document frequency (tf-idf). Essentially the tf-idf of a word in a given document increases the more times the word appears in the document, but decreases the more times the word appears in the entire corpus. This has two effects:
+\begin{enumerate}
+	\item Words which appear often throughout the corpus are given diminished weight (this could be another way to deal with stopwords)
+	\item Words which appear many times in a longer document but not many times in shorter documents are given normalized weight
+\end{enumerate}
+
+The second of these two effects helps alleviate the problems that come with longer text documents.
+
+It should be noted that we tried exclusively using tf-idf to deal with both stopwords and long documents, but this was not found to be as effective as explicitly removing the stopwords and then using tf-idf.
+
+% section histogram (end)
+
+   
+\section{Nonnegative Matrix Factorization} % (fold)
+\label{sec:nmf}
+To compute the NMF of the histogram matrix $H$ we used the MATLAB command \texttt{nnmf}. It took a great deal of tweaking the parameters of this function to obtain consistently satisfactory results. Perhaps the deepest problem encountered was that one must specify the number of topics that should be present in the factorization. If is already familiar with the documents in the corpus then this is an easy task, but if not then where should one start? This problem was essentially dealt with using a reweighting of the topic vectors, see Section \ref{sec:gram}.
+
+The remaining obstacles involved getting the \texttt{nnmf} command to generate the same factorization across multiple runs of the algorithm. Computing the NMF of a matrix typically involves using an iterative procedure to approximate $U$ and $V$. Iterative procedures, however, require initial guesses to begin. Without specifying a initial guesses for $U$ and $V$ \texttt{nnmf} generated random ones itself. This lead to an unacceptable amount of inconsistency between different executions of the code, using the same parameters. Sometimes the algorithm would produce great results, and sometimes it would fail entirely--all due to differences in the factorization produced by \texttt{nnmf}. We tried two approaches to move past this debacle. First we experimented with passing in initial guesses for $U$ and $V$ by just taking submatrices from the histogram matrix. This solved the problem of inconsistency between runs, but worsened the clustering performance of the algorithm. Depending on the corpus being considered we still obtained suboptimal results.
+
+The \texttt{nnmf} command can use either an alternating least-sqaures algorithm or a multiplicative algorithm to compute $U$ and $V$. The default setting is for it to use the alternating least-squares technique, since it produces more consistent output. The multiplicative method is much more sensitive to the initial guess. However, one can use the multiplicative method to generate many instances of $U$ and $V$, each time using different randomly generated initial guesses, and choose those which are ``best'' in some sense ($\min_{U,V}\|H-UV^T\|_2$). We found this method to produce the best results if one runs enough trials (around 20-30 in our experience).
+
+% section nmf (end)
+
+
+\section{Gram Matrix Reweighting} % (fold)
+\label{sec:gram}
+One of the biggest obstacles we faced in trying to use NMF to cluster documents was that in order to compute the NMF of the histogram matrix one needs to specify the number of topics to be used (this is equivalent to specifying the rank of the approximation). Without some knowledge about the underlying dataset it is not always possible to say how many topics will do a good job of summarizing the content of the documents. Furthermore, despite having used the tf-idf, we often found that upon computing the NMF of a corpus a few documents with very distinctive diction were getting their own topics. If we used too few topics then not all the documents were well represented and if we used too many, then a few distinctive documents got their own topics, leaving others unrepresented still. Often these individualized topics were very similar to one another. The aforementioned problems frequently led to poor clustering performance.
+
+In an attempt to solve the many-similar-topic problem, we decided to modify the topic vectors so that they reflected the likenesses of topics to one another. Our first effort was to construct an adjacency matrix which used various measures of the relationships between the topics to construct its entries. We then left-multiplied the matrix of topic vectors, $V$ by this matrix and performed clustering. The entries of this matrix were of the form $\exp(-sim(i,j)^2/\sigma)$, where $sim(i,j)$ is some similarity measure between topics $i$ and $j$ and $\sigma$ is a parameter. We experimented with similarity measures like the $\ell^2$ inner product and the cosine similarity. This granted us limited success, but not as much as we had hoped.
+
+Next we tried left-multiplication by a slightly different matrix. For our purposes the Gram matrix (or Grammian) is given by 
+\[
+G = \frac{1}{\|U\|^2}U^*U.
+\]
+Each of its entries is simply the inner product between two topics (the columns of $U$). This matrix modified the topic vectors in the desired manner. Left-multiplication by $G$ modifies the topic vectors so that the weight of their entries are distributed amongst topics with similar compositions. Supposed a topic vector has only one large component, i.e. its content is described by just one topic, say topic 1. Then multiplying it by $G$ will have the effect of increasing its components corresponding to topics related to topic 1. This means that we do not necessarily need to know the optimal number of topics in advance. If we select too large a number of topics then the Gram matrix will automatically create groups of topic vectors with similar structures by ``spreading'' the influence of similar topics among documents which are thematically alike. These groups are easy to cluster.
+
+% section gram (end)
+
+
+\section{Clustering} % (fold)
+\label{sec:clustering}
+Initially we ran into the same trouble with k-means clustering that we did using NMF, namely we were not getting consistent results between runs with identical parameters. The underlying cause was the same in both instances--the algorithms are iterative and their output relies on the initial guesses provided. Rather than make the same mistake as before and try supplying intial guesses chosen in some consistent manner, we ran k-means multiple times with different initial guesses and used the clustering with the lowest residual (sum of squared distances to the centroids) as our final grouping. Given enough runs, we were able to get much more consistent output.
+
+The MATLAB command \texttt{kmeans} allows one to specify how you would like it to compute distances. After applying all of the previously mentioned modifications to our algorithm we were still not getting performance which was as good as we had hoped. k-means was using the $\ell^2$ (Euclidean) norm to measure the differences between pairs of topic vectors. We found the $\ell^1$ norm to improve correct classification rates somewhat. The cosine similarity, however, gave dramatically better results. Its idea is simple: given two vectors, it returns the cosine of the angle between them. If the two topic vectors are collinear then the angle between them is 0, so their cosine similarity is 1 and if they are orthogonal then their cosine similarity is 0. Since topic vectors often contain nonzero components in only a few topics, vectors corresponding to documents on different subject matter are often orthogonal. Thus the cosine similarity does a stellar job of distinguishing between documents with different thematic content.
+
+% section clustering (end)
+
+
+\section{Summary and Conclusions} % (fold)
+\label{sec:conclusion}
+In attempting to classify data, it is often not enough to represent it in a more ideal basis. Often one must also employ a series of other techniques or choose parameters in a particular way in order to obtain decent results. This project was no exception. To get meaningful output we had to use some pre-processing methods to clean up our data before applying any data analysis techniques. To get said data science algorithms to consistently accomplish the tasks set before them we had to both modify the data further and tweak the parameters involved with the algorithms themselves. In the end we were able to accomplish our goal of clustering/classifying the text documents from our artificial corpus into their original books.
+
+% section conclusion (end)
+
+
+%	REFERENCE LIST
+%----------------------------------------------------------------------------------------
+\phantomsection
+\bibliographystyle{unsrt}
+\bibliography{report}
+%----------------------------------------------------------------------------------------
+
+% Appendix A------------------------------------------------------------------
+
+\phantomsection
+\section*{Appendix A: MATLAB Code}
+See the following pages published in MATLAB for the implementation of the algorithm presented in Section \ref{sec:alg_overview} along with supporting functions. The function \texttt{lexcmp} was downloaded from \url{http://www.mathworks.com/matlabcentral/fileexchange/23035-lexcmp}.
+
+\addcontentsline{toc}{section}{Appendix A}
+
+
+
+%----------------------------------------------------------------------------------------
+
+
+\end{document}
